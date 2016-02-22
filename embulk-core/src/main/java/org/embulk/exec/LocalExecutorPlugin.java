@@ -1,7 +1,9 @@
 package org.embulk.exec;
 
+import java.lang.Thread;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutorService;
@@ -491,10 +493,28 @@ public class LocalExecutorPlugin
         public void finish()
         {
             completeWorkers();
+            final CountDownLatch countDownLatch = new CountDownLatch(scatterCount);
             for (int i = 0; i < scatterCount; i++) {
                 if (filtereds[i] != null) {
-                    filtereds[i].finish();
+                    final PageOutput filtered = filtereds[i];
+                    Thread t = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            filtered.finish();
+                            countDownLatch.countDown();
+                        }
+                    });
                 }
+                else {
+                    countDownLatch.countDown();
+                }
+            }
+            try {
+                countDownLatch.await();
+            }
+            catch (InterruptedException ex) {
+                // unexpected
+                throw new RuntimeException(ex);
             }
         }
 
