@@ -113,6 +113,7 @@ public class LocalFileOutputPlugin
 
             public void add(Buffer buffer)
             {
+                log.trace("Output ThreadID = {}, buffer size = {}", Thread.currentThread().getId(), buffer.capacity());
                 try {
                     output.write(buffer.array(), buffer.offset(), buffer.limit());
                 } catch (IOException ex) {

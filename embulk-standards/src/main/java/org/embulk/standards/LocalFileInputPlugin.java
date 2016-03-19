@@ -151,6 +151,7 @@ public class LocalFileInputPlugin
                     if (lastPath != null && path.toString().compareTo(lastPath) <= 0) {
                         return FileVisitResult.CONTINUE;
                     } else {
+                        log.trace("visitFile");
                         Path parent = path.getParent();
                         if (parent == null) {
                             parent = CURRENT_DIR;

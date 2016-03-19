@@ -60,13 +60,18 @@ public class LocalExecutorPlugin
         Logger log = Exec.getLogger(LocalExecutorPlugin.class);
         int maxThreads = config.get(Integer.class, "max_threads", defaultMaxThreads);
         int minThreads = config.get(Integer.class, "min_output_tasks", defaultMinThreads);
+        log.trace("maxThreads = {}", maxThreads);
+        log.trace("min_output_tasks == minThreads = {}", minThreads);
         if (inputTaskCount > 0 && inputTaskCount < minThreads) {
             int scatterCount = (minThreads + inputTaskCount - 1) / inputTaskCount;
+            log.trace("Run ScatterExecutor");
+            log.trace("scatterCount = {}", scatterCount);
             log.info("Using local thread executor with max_threads={} / output tasks {} = input tasks {} * {}",
                     maxThreads, inputTaskCount * scatterCount, inputTaskCount, scatterCount);
             return new ScatterExecutor(maxThreads, inputTaskCount, scatterCount);
         }
         else {
+            log.trace("Run DirectExecutor");
             log.info("Using local thread executor with max_threads={} / tasks={}", maxThreads, inputTaskCount);
             return new DirectExecutor(maxThreads, inputTaskCount);
         }
@@ -84,6 +89,9 @@ public class LocalExecutorPlugin
         {
             this.inputTaskCount = inputTaskCount;
             this.outputTaskCount = outputTaskCount;
+            Logger log = Exec.getLogger(LocalExecutorPlugin.class);
+            log.trace("inputTaskCount = {}", inputTaskCount);
+            log.trace("outputTaskCount = {}", outputTaskCount);
         }
 
         public int getOutputTaskCount()
@@ -156,6 +164,9 @@ public class LocalExecutorPlugin
         public DirectExecutor(int maxThreads, int taskCount)
         {
             super(taskCount, taskCount);
+            Logger log = Exec.getLogger(LocalExecutorPlugin.class);
+            log.trace("inputThreadCount = {}", maxThreads);
+            log.trace("outputThreadCount = {}", maxThreads);
             this.executor = java.util.concurrent.Executors.newFixedThreadPool(maxThreads,
                     new ThreadFactoryBuilder()
                             .setNameFormat("embulk-executor-%d")
@@ -222,6 +233,7 @@ public class LocalExecutorPlugin
             super(inputTaskCount, inputTaskCount * scatterCount);
             this.inputTaskCount = inputTaskCount;
             this.scatterCount = scatterCount;
+            log.trace("inputThreadCount = {}", Math.max(maxThreads / scatterCount, 1));
             this.inputExecutor = java.util.concurrent.Executors.newFixedThreadPool(
                     Math.max(maxThreads / scatterCount, 1),
                     new ThreadFactoryBuilder()
@@ -436,6 +448,7 @@ public class LocalExecutorPlugin
             for (int i = 0; i < scatterCount; i++) {
                 closeThese[i] = new CloseResource();
             }
+            Logger log = Exec.getLogger(LocalExecutorPlugin.class);
             this.outputWorkers = new OutputWorker[scatterCount];
         }
 
@@ -476,6 +489,9 @@ public class LocalExecutorPlugin
 
         public void add(Page page)
         {
+            Logger log = Exec.getLogger(LocalExecutorPlugin.class);
+            int workerIndex = (int) (pageCount % scatterCount);
+            log.trace("inputTaskIndex = {}, outputWorkerIndex = {}, pageCount = {}", taskIndex, workerIndex, pageCount);
             OutputWorker worker = outputWorkers[(int) (pageCount % scatterCount)];
             if (worker != null) {
                 try {
